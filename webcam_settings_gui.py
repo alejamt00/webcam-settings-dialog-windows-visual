@@ -14,6 +14,8 @@ import sys
 # Constants
 CONTEXT_WINDOW_SIZE = 2  # Number of lines before/after to check for context
 AUDIO_FILTER_TERMS = {'audio', 'microphone', 'sound'}  # Terms to filter out audio devices
+# Windows-specific flag to hide console window when launching subprocesses
+CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
 
 
 class WebcamSettingsGUI:
@@ -137,7 +139,7 @@ class WebcamSettingsGUI:
                 text=True,
                 encoding='utf-8',
                 errors='replace',
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                creationflags=CREATE_NO_WINDOW
             )
             
             # Parse the output to find video devices
@@ -215,7 +217,7 @@ class WebcamSettingsGUI:
             # Use CREATE_NO_WINDOW to hide console, but the dialog will still show
             subprocess.Popen(
                 [self.ffmpeg_path, "-f", "dshow", "-show_video_device_dialog", "true", "-i", f"video={webcam_name}"],
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                creationflags=CREATE_NO_WINDOW
             )
             
             self.status_label.config(text=f"Settings dialog opened for '{webcam_name}'.", fg="green")
