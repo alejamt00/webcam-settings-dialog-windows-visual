@@ -8,6 +8,8 @@ This is nowhere near perfect, I made this in 15 minutes. If you can make it bett
 
 ## GUI Version (Recommended - Fully Automatic! 🎉)
 
+![GUI Screenshot](readme/gui_screenshot.png)
+
 The easiest way to use this tool is with the new GUI version that automatically detects your webcams.
 
 ### Requirements
