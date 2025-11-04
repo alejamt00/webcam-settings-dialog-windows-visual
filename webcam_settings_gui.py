@@ -11,6 +11,11 @@ import os
 import sys
 
 
+# Constants
+CONTEXT_WINDOW_SIZE = 2  # Number of lines before/after to check for context
+AUDIO_FILTER_TERMS = {'audio', 'microphone', 'sound'}  # Terms to filter out audio devices
+
+
 class WebcamSettingsGUI:
     def __init__(self, root):
         self.root = root
@@ -137,22 +142,7 @@ class WebcamSettingsGUI:
             
             # Parse the output to find video devices
             output = result.stderr  # ffmpeg outputs device list to stderr
-            
-            # Look for video devices in the output
-            lines = output.split('\n')
-            for i, line in enumerate(lines):
-                # Look for DirectShow video devices
-                if '"' in line and 'video' in line.lower():
-                    # Extract device name from quotes
-                    match = re.search(r'"([^"]+)"', line)
-                    if match:
-                        device_name = match.group(1)
-                        # Avoid duplicates and filter out audio devices
-                        if device_name not in self.webcams and not any(x in device_name.lower() for x in ['audio', 'microphone', 'sound']):
-                            # Additional check: look at context to confirm it's a video device
-                            context = ' '.join(lines[max(0, i-2):min(len(lines), i+3)]).lower()
-                            if 'video' in context or i > 0 and 'video' in lines[i-1].lower():
-                                self.webcams.append(device_name)
+            self.webcams = self._parse_ffmpeg_devices(output)
             
             # Update UI
             if self.webcams:
@@ -174,6 +164,39 @@ class WebcamSettingsGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to detect webcams:\n{str(e)}")
             self.status_label.config(text=f"Error: {str(e)}", fg="red")
+    
+    def _parse_ffmpeg_devices(self, output):
+        """Parse ffmpeg output to extract video device names
+        
+        Args:
+            output: String output from ffmpeg -list_devices
+            
+        Returns:
+            List of video device names
+        """
+        devices = []
+        lines = output.split('\n')
+        
+        for i, line in enumerate(lines):
+            # Look for DirectShow video devices
+            if '"' in line and 'video' in line.lower():
+                # Extract device name from quotes
+                match = re.search(r'"([^"]+)"', line)
+                if match:
+                    device_name = match.group(1)
+                    device_name_lower = device_name.lower()
+                    
+                    # Avoid duplicates and filter out audio devices
+                    if device_name not in devices and not any(term in device_name_lower for term in AUDIO_FILTER_TERMS):
+                        # Additional check: look at context to confirm it's a video device
+                        start_idx = max(0, i - CONTEXT_WINDOW_SIZE)
+                        end_idx = min(len(lines), i + CONTEXT_WINDOW_SIZE + 1)
+                        context = ' '.join(lines[start_idx:end_idx]).lower()
+                        
+                        if 'video' in context or (i > 0 and 'video' in lines[i-1].lower()):
+                            devices.append(device_name)
+        
+        return devices
     
     def launch_settings(self):
         """Launch the webcam settings dialog for the selected webcam"""

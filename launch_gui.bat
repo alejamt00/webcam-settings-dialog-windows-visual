@@ -13,3 +13,12 @@ if errorlevel 1 (
 
 REM Launch the GUI
 python "%~dp0webcam_settings_gui.py"
+
+REM Check if the GUI launched successfully
+if errorlevel 1 (
+    echo.
+    echo Failed to launch the GUI application.
+    echo Please ensure Python is properly installed with tkinter support.
+    pause
+    exit /b 1
+)
