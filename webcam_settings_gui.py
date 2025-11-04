@@ -12,7 +12,6 @@ import sys
 
 
 # Constants
-CONTEXT_WINDOW_SIZE = 2  # Number of lines before/after to check for context
 AUDIO_FILTER_TERMS = {'audio', 'microphone', 'sound'}  # Terms to filter out audio devices
 # Windows-specific flag to hide console window when launching subprocesses
 CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -179,9 +178,24 @@ class WebcamSettingsGUI:
         devices = []
         lines = output.split('\n')
         
-        for i, line in enumerate(lines):
-            # Look for DirectShow video devices
-            if '"' in line and 'video' in line.lower():
+        # Track whether we're in the video or audio devices section
+        in_video_section = False
+        
+        for line in lines:
+            # Check for section headers
+            if 'DirectShow video devices' in line:
+                in_video_section = True
+                continue
+            elif 'DirectShow audio devices' in line:
+                in_video_section = False
+                continue
+            
+            # Only process lines with quoted device names
+            if '"' in line and in_video_section:
+                # Skip "Alternative name" lines
+                if 'Alternative name' in line:
+                    continue
+                    
                 # Extract device name from quotes
                 match = re.search(r'"([^"]+)"', line)
                 if match:
@@ -189,13 +203,9 @@ class WebcamSettingsGUI:
                     device_name_lower = device_name.lower()
                     
                     # Avoid duplicates and filter out audio devices
-                    if device_name not in devices and not any(term in device_name_lower for term in AUDIO_FILTER_TERMS):
-                        # Additional check: look at context to confirm it's a video device
-                        start_idx = max(0, i - CONTEXT_WINDOW_SIZE)
-                        end_idx = min(len(lines), i + CONTEXT_WINDOW_SIZE + 1)
-                        context = ' '.join(lines[start_idx:end_idx]).lower()
-                        
-                        if 'video' in context or (i > 0 and 'video' in lines[i-1].lower()):
+                    if device_name not in devices:
+                        # Additional filter: skip if it contains audio-related terms
+                        if not any(term in device_name_lower for term in AUDIO_FILTER_TERMS):
                             devices.append(device_name)
         
         return devices
